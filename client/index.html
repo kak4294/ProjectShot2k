@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ProjectShot2k — Controller</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  /* ----------------------------------------------------------
+     ProjectShot2k Controller Client — Styles
+     Dark gaming UI with slot-colored accents
+  ---------------------------------------------------------- */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0e1117;
+    --surface:   #161b22;
+    --border:    #30363d;
+    --text:      #e6edf3;
+    --text-dim:  #7d8590;
+    --green:     #3fb950;
+    --red:       #f85149;
+    --yellow:    #d29922;
+    --slot-color: #58a6ff;
+
+    --radius: 8px;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: "SF Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+
+  #root { width: 100%; max-width: 540px; }
+
+  /* --- Header --- */
+  .header { text-align: center; margin-bottom: 24px; }
+  .header h1 {
+    font-size: 22px; font-weight: 700; letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  .header h1 span { color: var(--slot-color); }
+  .header .tagline { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+  /* --- Cards --- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+
+  /* --- Status bar --- */
+  .status-row {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-dot.connected    { background: var(--green);  box-shadow: 0 0 6px var(--green); }
+  .status-dot.disconnected { background: var(--red);    box-shadow: 0 0 6px var(--red); }
+  .status-dot.reconnecting { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+
+  .stat-pills {
+    display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
+  }
+  .pill {
+    font-family: var(--mono); font-size: 12px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 3px 8px;
+    color: var(--text-dim);
+  }
+  .pill strong { color: var(--text); }
+
+  /* --- Slot picker --- */
+  .slot-picker { display: flex; gap: 8px; }
+  .slot-btn {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .slot-btn:hover { border-color: var(--slot-color); }
+  .slot-btn.active {
+    border-color: var(--slot-color);
+    background: color-mix(in srgb, var(--slot-color) 15%, var(--bg));
+    color: var(--slot-color);
+  }
+  .slot-btn.taken {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  /* --- Gamepad selector --- */
+  .gp-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .no-gamepad {
+    color: var(--yellow);
+    font-size: 13px;
+    text-align: center;
+    padding: 8px;
+  }
+
+  /* --- Visual controller --- */
+  .controller-visual {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* Face buttons */
+  .face-buttons {
+    display: grid;
+    grid-template-areas:
+      ".  Y  ."
+      "X  .  B"
+      ".  A  .";
+    grid-template-columns: 36px 36px 36px;
+    grid-template-rows: 36px 36px 36px;
+    gap: 2px;
+  }
+  .face-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 14px; font-weight: 700;
+    color: var(--text-dim);
+    transition: all 0.05s;
+  }
+  .face-btn.pressed {
+    border-color: var(--slot-color);
+    background: color-mix(in srgb, var(--slot-color) 25%, var(--bg));
+    color: var(--slot-color);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--slot-color) 40%, transparent);
+  }
+  .fb-A { grid-area: A; }
+  .fb-B { grid-area: B; }
+  .fb-X { grid-area: X; }
+  .fb-Y { grid-area: Y; }
+
+  /* D-Pad */
+  .dpad {
+    display: grid;
+    grid-template-areas:
+      ".  U  ."
+      "L  .  R"
+      ".  D  .";
+    grid-template-columns: 28px 28px 28px;
+    grid-template-rows: 28px 28px 28px;
+    gap: 1px;
+  }
+  .dpad-btn {
+    width: 28px; height: 28px;
+    border: 2px solid var(--border);
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--text-dim);
+    transition: all 0.05s;
+  }
+  .dpad-btn.pressed {
+    border-color: var(--slot-color);
+    background: color-mix(in srgb, var(--slot-color) 25%, var(--bg));
+    color: var(--slot-color);
+  }
+  .dp-U { grid-area: U; border-radius: 4px 4px 0 0; }
+  .dp-D { grid-area: D; border-radius: 0 0 4px 4px; }
+  .dp-L { grid-area: L; border-radius: 4px 0 0 4px; }
+  .dp-R { grid-area: R; border-radius: 0 4px 4px 0; }
+
+  /* Sticks + buttons layout */
+  .controls-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
+  }
+
+  /* Analog stick */
+  .stick-container { text-align: center; }
+  .stick-label {
+    font-size: 10px; font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+  }
+  .stick-ring {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--bg);
+    position: relative;
+    /* crosshair */
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 72px 72px;
+    background-position: center;
+  }
+  .stick-thumb {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--slot-color);
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.03s;
+    box-shadow: 0 0 6px color-mix(in srgb, var(--slot-color) 50%, transparent);
+  }
+
+  /* Triggers */
+  .trigger-bar-container {
+    text-align: center;
+    flex: 1;
+  }
+  .trigger-label {
+    font-size: 10px; font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+  }
+  .trigger-track {
+    width: 100%;
+    height: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .trigger-fill {
+    height: 100%;
+    background: var(--slot-color);
+    border-radius: 6px;
+    transition: width 0.03s;
+  }
+
+  /* Bumpers / small buttons */
+  .small-buttons {
+    display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+  }
+  .sm-btn {
+    font-family: var(--mono); font-size: 11px;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text-dim);
+    transition: all 0.05s;
+  }
+  .sm-btn.pressed {
+    border-color: var(--slot-color);
+    background: color-mix(in srgb, var(--slot-color) 20%, var(--bg));
+    color: var(--slot-color);
+  }
+
+  /* --- Deadzone slider --- */
+  .deadzone-row {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .deadzone-row input[type=range] {
+    flex: 1;
+    accent-color: var(--slot-color);
+  }
+  .deadzone-row .dz-val {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    min-width: 36px;
+    text-align: right;
+  }
+
+  /* --- Disconnect button --- */
+  .disconnect-btn {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--red);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--red);
+    font-family: var(--mono);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 4px;
+  }
+  .disconnect-btn:hover {
+    background: color-mix(in srgb, var(--red) 12%, var(--bg));
+  }
+
+  /* --- Slot color themes --- */
+  .slot-1 { --slot-color: #58a6ff; }
+  .slot-2 { --slot-color: #f78166; }
+  .slot-3 { --slot-color: #3fb950; }
+  .slot-4 { --slot-color: #d2a8ff; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// =========================================================================
+// CONFIG
+// =========================================================================
+const WS_RECONNECT_DELAY = 2000;
+const DEFAULT_DEADZONE = 0.10;
+
+function applyDeadzone(value, dz) {
+  if (Math.abs(value) < dz) return 0.0;
+  const sign = value > 0 ? 1 : -1;
+  return sign * (Math.abs(value) - dz) / (1 - dz);
+}
+
+// Derive WS URL from current page location
+function getWsUrl(slot) {
+  const proto = window.location.protocol === "https:" ? "wss" : "ws";
+  return `${proto}://${window.location.host}/ws/controller/${slot}`;
+}
+
+// =========================================================================
+// APP
+// =========================================================================
+function App() {
+  // --- State ---
+  const [slot, setSlot] = useState(null);            // null = not connected
+  const [connState, setConnState] = useState("disconnected"); // connected | disconnected | reconnecting
+  const [gamepads, setGamepads] = useState([]);       // detected gamepad list
+  const [gpIndex, setGpIndex] = useState(0);          // selected gamepad index
+  const [deadzone, setDeadzone] = useState(DEFAULT_DEADZONE);
+  const [latency, setLatency] = useState(null);
+  const [fps, setFps] = useState(0);
+  const [framesSent, setFramesSent] = useState(0);
+
+  // Current input state for visual display
+  const [inputState, setInputState] = useState(null);
+
+  // Refs for animation loop
+  const wsRef = useRef(null);
+  const seqRef = useRef(0);
+  const rafRef = useRef(null);
+  const fpsCountRef = useRef(0);
+  const fpsTimerRef = useRef(null);
+  const slotRef = useRef(slot);
+
+  // Keep slotRef in sync
+  useEffect(() => { slotRef.current = slot; }, [slot]);
+
+  // --- Gamepad detection ---
+  useEffect(() => {
+    const scan = () => {
+      const gps = navigator.getGamepads ? navigator.getGamepads() : [];
+      const detected = [];
+      for (let i = 0; i < gps.length; i++) {
+        if (gps[i]) detected.push({ index: i, id: gps[i].id });
+      }
+      setGamepads(detected);
+    };
+    const onConnect = () => scan();
+    const onDisconnect = () => scan();
+    window.addEventListener("gamepadconnected", onConnect);
+    window.addEventListener("gamepaddisconnected", onDisconnect);
+    const interval = setInterval(scan, 1000);
+    scan();
+    return () => {
+      window.removeEventListener("gamepadconnected", onConnect);
+      window.removeEventListener("gamepaddisconnected", onDisconnect);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // --- FPS counter ---
+  useEffect(() => {
+    fpsTimerRef.current = setInterval(() => {
+      setFps(fpsCountRef.current);
+      fpsCountRef.current = 0;
+    }, 1000);
+    return () => clearInterval(fpsTimerRef.current);
+  }, []);
+
+  // --- WebSocket connect / input loop ---
+  const connectSlot = useCallback((chosenSlot) => {
+    // Disconnect existing
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+
+    setSlot(chosenSlot);
+    setConnState("reconnecting");
+    seqRef.current = 0;
+    setFramesSent(0);
+
+    const ws = new WebSocket(getWsUrl(chosenSlot));
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      setConnState("connected");
+      startPolling();
+    };
+
+    ws.onmessage = (evt) => {
+      try {
+        const msg = JSON.parse(evt.data);
+        if (msg.type === "ack" && msg.server_time) {
+          setLatency(Math.round(Date.now() - (msg.server_time - (Date.now() - msg.server_time))));
+        }
+      } catch {}
+    };
+
+    ws.onclose = () => {
+      setConnState("disconnected");
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+
+    ws.onerror = () => {
+      ws.close();
+    };
+
+    function startPolling() {
+      const poll = () => {
+        const gps = navigator.getGamepads();
+        const gp = gps[gpIndex];
+        if (gp && ws.readyState === WebSocket.OPEN) {
+          const frame = {
+            seq: seqRef.current++,
+            timestamp: Date.now(),
+            buttons: {
+              A: gp.buttons[0].pressed,
+              B: gp.buttons[1].pressed,
+              X: gp.buttons[2].pressed,
+              Y: gp.buttons[3].pressed,
+              LB: gp.buttons[4].pressed,
+              RB: gp.buttons[5].pressed,
+              BACK: gp.buttons[8].pressed,
+              START: gp.buttons[9].pressed,
+              LS: gp.buttons[10].pressed,
+              RS: gp.buttons[11].pressed,
+              DPAD_UP: gp.buttons[12].pressed,
+              DPAD_DOWN: gp.buttons[13].pressed,
+              DPAD_LEFT: gp.buttons[14].pressed,
+              DPAD_RIGHT: gp.buttons[15].pressed,
+              GUIDE: gp.buttons[16]?.pressed || false,
+            },
+            triggers: {
+              LT: gp.buttons[6].value,
+              RT: gp.buttons[7].value,
+            },
+            sticks: {
+              LS_X: applyDeadzone(gp.axes[0], deadzone),
+              LS_Y: applyDeadzone(gp.axes[1], deadzone),
+              RS_X: applyDeadzone(gp.axes[2], deadzone),
+              RS_Y: applyDeadzone(gp.axes[3], deadzone),
+            },
+          };
+          ws.send(JSON.stringify(frame));
+          setInputState(frame);
+          setFramesSent(prev => prev + 1);
+          fpsCountRef.current++;
+        }
+        rafRef.current = requestAnimationFrame(poll);
+      };
+      rafRef.current = requestAnimationFrame(poll);
+    }
+  }, [gpIndex, deadzone]);
+
+  const disconnect = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    setSlot(null);
+    setConnState("disconnected");
+    setInputState(null);
+    setLatency(null);
+    setFps(0);
+    setFramesSent(0);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (wsRef.current) wsRef.current.close();
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  // --- Derived ---
+  const isConnected = connState === "connected";
+  const slotClass = slot ? `slot-${slot}` : "";
+
+  // --- Render ---
+  return (
+    <div className={slotClass}>
+      {/* Header */}
+      <div className="header">
+        <h1>Project<span>Shot</span>2k</h1>
+        <div className="tagline">Remote controller input client</div>
+      </div>
+
+      {/* Connection status */}
+      <div className="card">
+        <div className="card-label">Status</div>
+        <div className="status-row">
+          <div className={`status-dot ${connState}`} />
+          <span>
+            {connState === "connected" && `Slot ${slot} — streaming inputs`}
+            {connState === "reconnecting" && "Connecting…"}
+            {connState === "disconnected" && (slot ? "Disconnected" : "Select a slot to connect")}
+          </span>
+        </div>
+        {isConnected && (
+          <div className="stat-pills">
+            <div className="pill">Latency <strong>{latency !== null ? `${latency}ms` : "—"}</strong></div>
+            <div className="pill">Send rate <strong>{fps} Hz</strong></div>
+            <div className="pill">Frames <strong>{framesSent.toLocaleString()}</strong></div>
+          </div>
+        )}
+      </div>
+
+      {/* Gamepad detection */}
+      <div className="card">
+        <div className="card-label">Gamepad</div>
+        {gamepads.length === 0 ? (
+          <div className="no-gamepad">
+            No gamepad detected — plug one in and press a button
+          </div>
+        ) : (
+          <select
+            className="gp-select"
+            value={gpIndex}
+            onChange={e => setGpIndex(Number(e.target.value))}
+          >
+            {gamepads.map(gp => (
+              <option key={gp.index} value={gp.index}>
+                #{gp.index}: {gp.id}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {/* Slot picker (only when disconnected) */}
+      {!isConnected && (
+        <div className="card">
+          <div className="card-label">Player slot</div>
+          <div className="slot-picker">
+            {[1, 2, 3, 4].map(s => (
+              <button
+                key={s}
+                className={`slot-btn slot-${s} ${slot === s ? "active" : ""}`}
+                onClick={() => connectSlot(s)}
+                disabled={gamepads.length === 0}
+              >
+                P{s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Visual controller */}
+      {isConnected && inputState && (
+        <div className="card">
+          <div className="card-label">Controller</div>
+          <div className="controller-visual">
+
+            {/* Triggers */}
+            <div className="controls-row">
+              <div className="trigger-bar-container">
+                <div className="trigger-label">LT</div>
+                <div className="trigger-track">
+                  <div className="trigger-fill" style={{width: `${(inputState.triggers.LT * 100)}%`}} />
+                </div>
+              </div>
+              <div className="trigger-bar-container">
+                <div className="trigger-label">RT</div>
+                <div className="trigger-track">
+                  <div className="trigger-fill" style={{width: `${(inputState.triggers.RT * 100)}%`}} />
+                </div>
+              </div>
+            </div>
+
+            {/* Bumpers + small buttons */}
+            <div className="small-buttons">
+              {["LB", "RB", "BACK", "START", "LS", "RS", "GUIDE"].map(b => (
+                <div key={b} className={`sm-btn ${inputState.buttons[b] ? "pressed" : ""}`}>
+                  {b}
+                </div>
+              ))}
+            </div>
+
+            {/* Sticks + Face buttons + D-pad */}
+            <div className="controls-row">
+              {/* Left stick */}
+              <div className="stick-container">
+                <div className="stick-label">L Stick</div>
+                <div className="stick-ring">
+                  <div
+                    className="stick-thumb"
+                    style={{
+                      left: `${50 + inputState.sticks.LS_X * 40}%`,
+                      top:  `${50 + inputState.sticks.LS_Y * 40}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* D-Pad */}
+              <div className="dpad">
+                <div className={`dpad-btn dp-U ${inputState.buttons.DPAD_UP ? "pressed" : ""}`}>▲</div>
+                <div className={`dpad-btn dp-D ${inputState.buttons.DPAD_DOWN ? "pressed" : ""}`}>▼</div>
+                <div className={`dpad-btn dp-L ${inputState.buttons.DPAD_LEFT ? "pressed" : ""}`}>◀</div>
+                <div className={`dpad-btn dp-R ${inputState.buttons.DPAD_RIGHT ? "pressed" : ""}`}>▶</div>
+              </div>
+
+              {/* Face buttons */}
+              <div className="face-buttons">
+                <div className={`face-btn fb-A ${inputState.buttons.A ? "pressed" : ""}`}>A</div>
+                <div className={`face-btn fb-B ${inputState.buttons.B ? "pressed" : ""}`}>B</div>
+                <div className={`face-btn fb-X ${inputState.buttons.X ? "pressed" : ""}`}>X</div>
+                <div className={`face-btn fb-Y ${inputState.buttons.Y ? "pressed" : ""}`}>Y</div>
+              </div>
+
+              {/* Right stick */}
+              <div className="stick-container">
+                <div className="stick-label">R Stick</div>
+                <div className="stick-ring">
+                  <div
+                    className="stick-thumb"
+                    style={{
+                      left: `${50 + inputState.sticks.RS_X * 40}%`,
+                      top:  `${50 + inputState.sticks.RS_Y * 40}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Deadzone */}
+      {isConnected && (
+        <div className="card">
+          <div className="card-label">Deadzone</div>
+          <div className="deadzone-row">
+            <input
+              type="range"
+              min="0" max="0.5" step="0.01"
+              value={deadzone}
+              onChange={e => setDeadzone(parseFloat(e.target.value))}
+            />
+            <span className="dz-val">{deadzone.toFixed(2)}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Disconnect */}
+      {isConnected && (
+        <button className="disconnect-btn" onClick={disconnect}>
+          Disconnect from Slot {slot}
+        </button>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
